@@ -37,10 +37,9 @@ namespace gravity_simulator_csharp
 		internal void Tick()
 		{
 			DeleteOutOfBoundBodies();
-			List<Vector2> forces;
-			forces = ComputeForcesBruteHalf();
+			List<Vector2> forces = ComputeForcesBruteHalf();
 			ShiftBodies(forces);
-			CollideBodies();
+			CollideBodiesBruteHelf();
 			ComputedTicks++;
 		}
 
@@ -53,33 +52,6 @@ namespace gravity_simulator_csharp
 					Bodies.RemoveAt(index);
 				}
 			}
-		}
-
-		private List<Vector2> ComputeForcesBrute()
-		{
-			List<Vector2> forces = new List<Vector2>();
-
-			foreach (Body bodyA in Bodies)
-			{
-				Vector2 acceleration = Vector2.Zero;
-
-				foreach (Body bodyB in Bodies)
-				{
-					if (bodyB != bodyA)
-					{
-						float distance = Vector2.Distance(bodyA.Position, bodyB.Position);
-						float force = _gravitationalConstant * ((bodyA.Mass * bodyB.Mass) / (float)Math.Pow(distance, 2));
-
-						float angle = (float)Math.Atan2(bodyB.Position.Y - bodyA.Position.Y, bodyB.Position.X - bodyA.Position.X);
-						acceleration.X += (float)Math.Cos(angle) * force;
-						acceleration.Y += (float)Math.Sin(angle) * force;
-					}
-				}
-
-				forces.Add(acceleration);
-			}
-
-			return forces;
 		}
 
 		private List<Vector2> ComputeForcesBruteHalf()
@@ -134,7 +106,7 @@ namespace gravity_simulator_csharp
 			}
 		}
 
-		private void CollideBodies()
+		private void CollideBodiesBruteHelf()
 		{
 			for (int i = 0; i < Bodies.Count; i++)
 			{
