@@ -1,41 +1,92 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Numerics;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 
 namespace gravity_simulator_csharp
 {
-	class Program
-	{
-		static void Main(string[] args)
-		{
-			List<Body> bodies = new List<Body>();
-			bodies.Add(new Body(mass: 1e12F, position: new Vector2(-5, -5), velocity: Vector2.Zero, acceleration: Vector2.Zero));
-			bodies.Add(new Body(mass: 1e12F, position: new Vector2(-5, 5), velocity: Vector2.Zero, acceleration: Vector2.Zero));
-			bodies.Add(new Body(mass: 1e12F, position: new Vector2(5, 0), velocity: Vector2.Zero, acceleration: Vector2.Zero));
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            const uint bodyNumber = 100;
+            const uint simulationDurationInSeconds = 60;
+            const uint framesPerSecond = 30;
 
-			Universe universe = new Universe(computationsPerSecond: 100, bodies);
+            ISeedStrategy seedStrategy = new PlanetRingStrategy();
+            var universe = new Universe(computationsPerSecond: 100, bodyNumber, seedStrategy);
+            var snapshots = new SerializedUniverse(bodyNumber, simulationDurationInSeconds, framesPerSecond);
 
-			const uint framesPerSecond = 5;
-			const float durationBetweenFrames = 1f / framesPerSecond;
-			float durationSinceLastSnapshot = 0;
+            snapshots.SnapshotUniverse(universe);
 
-			while (universe.Duration < 5)
-			{
-				universe.Tick();
-				durationSinceLastSnapshot += 1f / universe.ComputationsPerSecond;
+            const float durationBetweenFrames = 1f / framesPerSecond;
+            float durationSinceLastSnapshot = 0;
+			float percent = 0;
+			float percentTarget = 0.1f;
 
-				if (durationSinceLastSnapshot > durationBetweenFrames)
-				{
-					durationSinceLastSnapshot = 0;
+			Stopwatch watch = Stopwatch.StartNew();
 
-					foreach (Body body in universe.Bodies)
-					{
-						Console.WriteLine("X: {0}, Y: {1}", body.Position.X, body.Position.Y);
+            while (universe.Duration < simulationDurationInSeconds)
+            {
+                universe.Tick();
+                durationSinceLastSnapshot += 1f / universe.ComputationsPerSecond;
+
+                if (durationSinceLastSnapshot > durationBetweenFrames)
+                {
+                    durationSinceLastSnapshot = 0;
+                    snapshots.SnapshotUniverse(universe);
+
+					percent = universe.Duration / simulationDurationInSeconds;
+
+					if (percent >= percentTarget) {
+						percentTarget += 0.1f;
+						Console.Write("{0}%...", Math.Truncate(percent * 100));
 					}
+                }
+            }
 
-					Console.WriteLine("");
-				}
-			}
-		}
-	}
+			watch.Stop();
+
+			Console.WriteLine("");
+			Console.WriteLine("Elapsed time: {0}", watch.Elapsed);
+            OutputFrames(snapshots);
+        }
+
+        static void OutputFrames(SerializedUniverse universe)
+        {
+            Stream stream = new FileStream("output.json", FileMode.Create, FileAccess.Write, FileShare.None);
+            DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(SerializedUniverse));
+            serializer.WriteObject(stream, universe);
+        }
+    }
+
+    [DataContract]
+    internal class SerializedUniverse
+    {
+		[DataMember]
+		uint framesPerSecond;
+
+        [DataMember]
+        List<List<float[]>> framesBodiesCoordinates;
+
+        internal SerializedUniverse(uint bodyNumber, uint seconds, uint framesPerSecond)
+        {
+			this.framesPerSecond = framesPerSecond;
+            framesBodiesCoordinates = new List<List<float[]>>();
+        }
+
+        internal void SnapshotUniverse(Universe universe)
+        {
+            List<float[]> bodies = new List<float[]>();
+
+            foreach (Body body in universe.Bodies)
+            {
+                bodies.Add(new float[] { body.Position.X, body.Position.Y });
+            }
+
+            framesBodiesCoordinates.Add(bodies);
+        }
+    }
 }

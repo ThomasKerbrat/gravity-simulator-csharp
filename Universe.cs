@@ -6,17 +6,22 @@ namespace gravity_simulator_csharp
 {
 	internal class Universe
 	{
-		private const float GravitationalConstant = 6.67408e-11f;
+		private const float _gravitationalConstant = 6.67408e-11f;
 		private const uint OutwardBoundLimit = 2000;
 		private uint ComputedTicks = 0;
 
 		internal readonly uint ComputationsPerSecond;
 		internal readonly List<Body> Bodies;
 
-		internal Universe(uint computationsPerSecond, List<Body> bodies)
+		internal Universe(uint computationsPerSecond, uint bodyNumber, ISeedStrategy seedStrategy)
 		{
 			this.ComputationsPerSecond = computationsPerSecond;
-			this.Bodies = bodies;
+			this.Bodies = new List<Body>();
+
+			for (int index = 0; index < bodyNumber; index++)
+			{
+				this.Bodies.Add(seedStrategy.NextBody(this));
+			}
 		}
 
 		internal float Duration
@@ -24,10 +29,16 @@ namespace gravity_simulator_csharp
 			get { return ComputedTicks / (float)ComputationsPerSecond; }
 		}
 
+		internal float GravitationalConstant
+		{
+			get { return _gravitationalConstant; }
+		}
+
 		internal void Tick()
 		{
 			DeleteOutOfBoundBodies();
-			List<Vector2> forces = ComputeForce();
+			List<Vector2> forces;
+			forces = ComputeForcesBruteHalf();
 			ShiftBodies(forces);
 			ComputedTicks++;
 		}
@@ -43,7 +54,7 @@ namespace gravity_simulator_csharp
 			}
 		}
 
-		private List<Vector2> ComputeForce()
+		private List<Vector2> ComputeForcesBrute()
 		{
 			List<Vector2> forces = new List<Vector2>();
 
@@ -56,7 +67,7 @@ namespace gravity_simulator_csharp
 					if (bodyB != bodyA)
 					{
 						float distance = Vector2.Distance(bodyA.Position, bodyB.Position);
-						float force = GravitationalConstant * ((bodyA.Mass * bodyB.Mass) / (float)Math.Pow(distance, 2));
+						float force = _gravitationalConstant * ((bodyA.Mass * bodyB.Mass) / (float)Math.Pow(distance, 2));
 
 						float angle = (float)Math.Atan2(bodyB.Position.Y - bodyA.Position.Y, bodyB.Position.X - bodyA.Position.X);
 						acceleration.X += (float)Math.Cos(angle) * force;
@@ -65,6 +76,39 @@ namespace gravity_simulator_csharp
 				}
 
 				forces.Add(acceleration);
+			}
+
+			return forces;
+		}
+
+		private List<Vector2> ComputeForcesBruteHalf()
+		{
+			List<Vector2> forces = new List<Vector2>();
+
+			foreach (Body body in Bodies)
+			{
+				forces.Add(Vector2.Zero);
+			}
+
+			for (int i = 0; i < Bodies.Count; i++)
+			{
+				for (int j = i + 1; j < Bodies.Count; j++)
+				{
+					float distance = Vector2.Distance(Bodies[i].Position, Bodies[j].Position);
+					float force = _gravitationalConstant * ((Bodies[i].Mass * Bodies[j].Mass) / (float)Math.Pow(distance, 2));
+
+					float angle = (float)Math.Atan2(Bodies[j].Position.Y - Bodies[i].Position.Y, Bodies[j].Position.X - Bodies[i].Position.X);
+					forces[i] = new Vector2(
+						forces[i].X + (float)Math.Cos(angle) * force,
+						forces[i].Y + (float)Math.Sin(angle) * force
+					);
+
+					angle = (float)Math.Atan2(Bodies[i].Position.Y - Bodies[j].Position.Y, Bodies[i].Position.X - Bodies[j].Position.X);
+					forces[j] = new Vector2(
+						forces[j].X + (float)Math.Cos(angle) * force,
+						forces[j].Y + (float)Math.Sin(angle) * force
+					);
+				}
 			}
 
 			return forces;
