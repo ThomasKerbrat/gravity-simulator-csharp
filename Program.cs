@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 
 namespace gravity_simulator_csharp
@@ -59,34 +57,6 @@ namespace gravity_simulator_csharp
             Stream stream = new FileStream("output.json", FileMode.Create, FileAccess.Write, FileShare.None);
             DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(SerializedUniverse));
             serializer.WriteObject(stream, universe);
-        }
-    }
-
-    [DataContract]
-    internal class SerializedUniverse
-    {
-		[DataMember]
-		uint framesPerSecond;
-
-        [DataMember]
-        List<List<float[]>> framesBodiesCoordinates;
-
-        internal SerializedUniverse(uint bodyNumber, uint seconds, uint framesPerSecond)
-        {
-			this.framesPerSecond = framesPerSecond;
-            framesBodiesCoordinates = new List<List<float[]>>();
-        }
-
-        internal void SnapshotUniverse(Universe universe)
-        {
-            List<float[]> bodies = new List<float[]>();
-
-            foreach (Body body in universe.Bodies)
-            {
-                bodies.Add(new float[] { body.Position.X, body.Position.Y });
-            }
-
-            framesBodiesCoordinates.Add(bodies);
         }
     }
 }
