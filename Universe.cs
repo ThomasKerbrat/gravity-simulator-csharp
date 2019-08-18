@@ -40,6 +40,7 @@ namespace gravity_simulator_csharp
 			List<Vector2> forces;
 			forces = ComputeForcesBruteHalf();
 			ShiftBodies(forces);
+			CollideBodies();
 			ComputedTicks++;
 		}
 
@@ -94,16 +95,18 @@ namespace gravity_simulator_csharp
 			{
 				for (int j = i + 1; j < Bodies.Count; j++)
 				{
-					float distance = Vector2.Distance(Bodies[i].Position, Bodies[j].Position);
-					float force = _gravitationalConstant * ((Bodies[i].Mass * Bodies[j].Mass) / (float)Math.Pow(distance, 2));
+					Body a = Bodies[i];
+					Body b = Bodies[j];
+					float distance = Vector2.Distance(a.Position, b.Position);
+					float force = _gravitationalConstant * ((a.Mass * b.Mass) / (float)Math.Pow(distance, 2));
 
-					float angle = (float)Math.Atan2(Bodies[j].Position.Y - Bodies[i].Position.Y, Bodies[j].Position.X - Bodies[i].Position.X);
+					float angle = (float)Math.Atan2(b.Position.Y - a.Position.Y, b.Position.X - a.Position.X);
 					forces[i] = new Vector2(
 						forces[i].X + (float)Math.Cos(angle) * force,
 						forces[i].Y + (float)Math.Sin(angle) * force
 					);
 
-					angle = (float)Math.Atan2(Bodies[i].Position.Y - Bodies[j].Position.Y, Bodies[i].Position.X - Bodies[j].Position.X);
+					angle = (float)((angle + Math.PI) % (2 * Math.PI));
 					forces[j] = new Vector2(
 						forces[j].X + (float)Math.Cos(angle) * force,
 						forces[j].Y + (float)Math.Sin(angle) * force
@@ -128,6 +131,51 @@ namespace gravity_simulator_csharp
 
 				body.Position.X += body.Velocity.X / ComputationsPerSecond;
 				body.Position.Y += body.Velocity.Y / ComputationsPerSecond;
+			}
+		}
+
+		private void CollideBodies()
+		{
+			for (int i = 0; i < Bodies.Count; i++)
+			{
+				for (int j = i + 1; j < Bodies.Count; j++)
+				{
+					Body a = Bodies[i];
+					Body b = Bodies[j];
+
+					if (a == null || b == null) continue;
+
+					float distance = Vector2.Distance(a.Position, b.Position);
+
+					if (distance < (a.Radius + b.Radius))
+					{
+						a.Position = new Vector2(
+							(a.Position.X * a.Mass + b.Position.X * b.Mass) / (a.Mass + b.Mass),
+							(a.Position.Y * a.Mass + b.Position.Y * b.Mass) / (a.Mass + b.Mass)
+						);
+
+						a.Velocity = new Vector2(
+							(a.Velocity.X * a.Mass + b.Velocity.X * b.Mass) / (a.Mass + b.Mass),
+							(a.Velocity.Y * a.Mass + b.Velocity.Y * b.Mass) / (a.Mass + b.Mass)
+						);
+
+						a.Acceleration = new Vector2(
+							(a.Acceleration.X * a.Mass + b.Acceleration.X * b.Mass) / (a.Mass + b.Mass),
+							(a.Acceleration.Y * a.Mass + b.Acceleration.Y * b.Mass) / (a.Mass + b.Mass)
+						);
+
+						a.Mass += b.Mass;
+						Bodies[j] = null;
+					}
+				}
+			}
+
+			for (int index = Bodies.Count - 1; index >= 0; index--)
+			{
+				if (Bodies[index] == null)
+				{
+					Bodies.RemoveAt(index);
+				}
 			}
 		}
 	}
