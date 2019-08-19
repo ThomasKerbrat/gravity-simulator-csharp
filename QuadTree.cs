@@ -12,6 +12,11 @@ namespace gravity_simulator_csharp
 		private List<Body> Bodies;
 		private BarnesHutTree[] Nodes;
 
+		private bool _didComputeTotalMass = false;
+		private float _totalMass;
+		private bool _didComputeCenterOfMass = false;
+		private Nullable<Vector2> _centerOfMass;
+
 		public BarnesHutTree(Rectangle boundary, uint leafCapacity)
 		{
 			this.Boundary = boundary;
@@ -21,7 +26,12 @@ namespace gravity_simulator_csharp
 
 		private float GetTotalMass(Body exclude)
 		{
-			float _totalMass = 0;
+			if (_didComputeTotalMass == true && Boundary.Contains(exclude.Position) == false)
+			{
+				return _totalMass;
+			}
+
+			float totalMass = 0;
 
 			if (Bodies != null)
 			{
@@ -29,7 +39,7 @@ namespace gravity_simulator_csharp
 				{
 					if (body != exclude)
 					{
-						_totalMass += body.Mass;
+						totalMass += body.Mass;
 					}
 				}
 			}
@@ -37,8 +47,14 @@ namespace gravity_simulator_csharp
 			{
 				foreach (BarnesHutTree tree in Nodes)
 				{
-					_totalMass += tree.GetTotalMass(exclude);
+					totalMass += tree.GetTotalMass(exclude);
 				}
+			}
+
+			if (Boundary.Contains(exclude.Position) == false)
+			{
+				_totalMass = totalMass;
+				_didComputeTotalMass = true;
 			}
 
 			return _totalMass;
@@ -46,11 +62,19 @@ namespace gravity_simulator_csharp
 
 		private Nullable<Vector2> GetCenterOfMass(Body exclude)
 		{
+			// Checking if there is no bodies or no sub-trees.
 			if (Bodies != null && Bodies.Count == 0 && Nodes == null)
 			{
 				return null;
 			}
 
+			// Checking if we can use the cached value (if it has already been computed).
+			if (_didComputeCenterOfMass == true && Boundary.Contains(exclude.Position) == false)
+			{
+				return _centerOfMass;
+			}
+
+			// Getting the bodies from which to compute the center of mass.
 			var bodies = new List<Body>();
 
 			if (Bodies != null)
@@ -59,17 +83,20 @@ namespace gravity_simulator_csharp
 				{
 					if (body != exclude)
 					{
-						bodies.AddRange(Bodies);
+						bodies.Add(body);
 					}
 				}
 			}
 			else if (Nodes != null)
 			{
+				Nullable<Vector2> nodesCenterOfMass;
+
 				foreach (BarnesHutTree tree in Nodes)
 				{
-					if (tree.GetCenterOfMass(exclude).HasValue == true)
+					nodesCenterOfMass = tree.GetCenterOfMass(exclude);
+					if (nodesCenterOfMass.HasValue == true)
 					{
-						bodies.Add(new Body(tree.GetTotalMass(exclude), tree.GetCenterOfMass(exclude).Value, Vector2.Zero, Vector2.Zero));
+						bodies.Add(new Body(tree.GetTotalMass(exclude), nodesCenterOfMass.Value, Vector2.Zero, Vector2.Zero));
 					}
 				}
 			}
@@ -79,6 +106,7 @@ namespace gravity_simulator_csharp
 				return null;
 			}
 
+			// Actually computing the center of mass.
 			float totalMass = 0;
 			float allX = 0;
 			float allY = 0;
@@ -90,12 +118,21 @@ namespace gravity_simulator_csharp
 				allY += body.Position.Y * body.Mass;
 			}
 
-			return new Vector2(allX / totalMass, allY / totalMass);
+			var centerOfMass = new Vector2(allX / totalMass, allY / totalMass);
+
+			// Caching for later use (only if there is no body to exclude).
+			if (Boundary.Contains(exclude.Position) == false)
+			{
+				_didComputeCenterOfMass = true;
+				_centerOfMass = centerOfMass;
+			}
+
+			return centerOfMass;
 		}
 
 		public bool Insert(Body body)
 		{
-			if (Boundary.Contains(body) == false)
+			if (Boundary.Contains(body.Position) == false)
 			{
 				return false;
 			}
@@ -174,7 +211,7 @@ namespace gravity_simulator_csharp
 			{
 				foreach (Body body in Bodies)
 				{
-					if (range.Contains(body))
+					if (range.Contains(body.Position))
 					{
 						bodiesInRange.Add(body);
 					}
@@ -254,10 +291,10 @@ namespace gravity_simulator_csharp
 		public double Width { get; private set; }
 		public double Height { get; private set; }
 
-		public bool Contains(Body body)
+		public bool Contains(Vector2 point)
 		{
-			return body.Position.X >= Origin.X && body.Position.X <= Origin.X + Width
-				&& body.Position.Y >= Origin.Y && body.Position.Y <= Origin.Y + Height;
+			return point.X >= Origin.X && point.X <= Origin.X + Width
+				&& point.Y >= Origin.Y && point.Y <= Origin.Y + Height;
 		}
 
 		public bool Intersects(Rectangle boundary)
