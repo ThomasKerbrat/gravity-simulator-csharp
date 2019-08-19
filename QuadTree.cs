@@ -15,7 +15,7 @@ namespace gravity_simulator_csharp
 		private bool _didComputeTotalMass = false;
 		private float _totalMass;
 		private bool _didComputeCenterOfMass = false;
-		private Nullable<Vector2> _centerOfMass;
+		private Vector2? _centerOfMass;
 
 		public BarnesHutTree(Rectangle boundary, uint leafCapacity)
 		{
@@ -60,7 +60,7 @@ namespace gravity_simulator_csharp
 			return _totalMass;
 		}
 
-		private Nullable<Vector2> GetCenterOfMass(Body exclude)
+		private Vector2? GetCenterOfMass(Body exclude)
 		{
 			// Checking if there is no bodies or no sub-trees.
 			if (Bodies != null && Bodies.Count == 0 && Nodes == null)
@@ -75,7 +75,7 @@ namespace gravity_simulator_csharp
 			}
 
 			// Getting the bodies from which to compute the center of mass.
-			var bodies = new List<Body>();
+			var bodies = new List<VirtualBody>();
 
 			if (Bodies != null)
 			{
@@ -83,20 +83,28 @@ namespace gravity_simulator_csharp
 				{
 					if (body != exclude)
 					{
-						bodies.Add(body);
+						bodies.Add(VirtualBody.FromBody(body));
 					}
 				}
 			}
 			else if (Nodes != null)
 			{
-				Nullable<Vector2> nodesCenterOfMass;
+				Vector2? nodesCenterOfMass;
+				VirtualBody newBody;
+				float treesTotalMass;
 
 				foreach (BarnesHutTree tree in Nodes)
 				{
 					nodesCenterOfMass = tree.GetCenterOfMass(exclude);
 					if (nodesCenterOfMass.HasValue == true)
 					{
-						bodies.Add(new Body(tree.GetTotalMass(exclude), nodesCenterOfMass.Value, Vector2.Zero, Vector2.Zero));
+						treesTotalMass = tree.GetTotalMass(exclude);
+						newBody = new VirtualBody()
+						{
+							Mass = treesTotalMass,
+							Position = nodesCenterOfMass.Value,
+						};
+						bodies.Add(newBody);
 					}
 				}
 			}
@@ -111,7 +119,7 @@ namespace gravity_simulator_csharp
 			float allX = 0;
 			float allY = 0;
 
-			foreach (Body body in bodies)
+			foreach (VirtualBody body in bodies)
 			{
 				totalMass += body.Mass;
 				allX += body.Position.X * body.Mass;
@@ -230,21 +238,20 @@ namespace gravity_simulator_csharp
 			return bodiesInRange;
 		}
 
-		public List<Body> Query(Body body, float theta)
+		public List<VirtualBody> Query(Body body, float theta)
 		{
-			var virtualBodies = new List<Body>();
-			Nullable<Vector2> centerOfMass;
+			var virtualBodies = new List<VirtualBody>();
 
+			Vector2? centerOfMass;
 			centerOfMass = GetCenterOfMass(body);
 
 			if (Bodies != null && Bodies.Count > 0 && centerOfMass.HasValue)
 			{
-				virtualBodies.Add(new Body(
-					GetTotalMass(body),
-					centerOfMass.Value,
-					Vector2.Zero,
-					Vector2.Zero
-				));
+				virtualBodies.Add(new VirtualBody()
+				{
+					Mass = GetTotalMass(body),
+					Position = centerOfMass.Value,
+				});
 			}
 			else if (Nodes != null)
 			{
@@ -263,12 +270,11 @@ namespace gravity_simulator_csharp
 						}
 						else
 						{
-							virtualBodies.Add(
-								new Body(tree.GetTotalMass(body),
-								centerOfMass.Value,
-								Vector2.Zero,
-								Vector2.Zero
-							));
+							virtualBodies.Add(new VirtualBody()
+							{
+								Mass = tree.GetTotalMass(body),
+								Position = centerOfMass.Value,
+							});
 						}
 					}
 				}

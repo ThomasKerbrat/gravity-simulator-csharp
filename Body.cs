@@ -5,7 +5,6 @@ namespace gravity_simulator_csharp
 {
 	public class Body
 	{
-		private float _radius;
 		private float _mass;
 
 		public Body(float mass, Vector2 position, Vector2 velocity, Vector2 acceleration)
@@ -38,9 +37,9 @@ namespace gravity_simulator_csharp
 
 		private void ComputeRadius()
 		{
-			_radius = (float)Math.Pow(3f / 4f * Mass / Math.PI, 1f / 3f) / 5e3f;
+			Radius = (float)Math.Pow(3f / 4f * Mass / Math.PI, 1f / 3f) / 5e3f;
 		}
 
-		public float Radius { get { return _radius; } }
-	}
+        public float Radius { get; private set; }
+    }
 }

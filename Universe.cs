@@ -130,9 +130,9 @@ namespace gravity_simulator_csharp
 			foreach (Body a in Bodies)
 			{
 				var forcesOnBody = Vector2.Zero;
-				List<Body> virtualBodies = tree.Query(a, Theta);
+				List<VirtualBody> virtualBodies = tree.Query(a, Theta);
 
-				foreach (Body b in virtualBodies)
+				foreach (VirtualBody b in virtualBodies)
 				{
 					float distance = Vector2.Distance(a.Position, b.Position);
 					float force = GravitationalConstant * ((a.Mass * b.Mass) / (float)Math.Pow(distance, 2));

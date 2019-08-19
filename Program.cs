@@ -92,7 +92,7 @@ namespace gravity_simulator_csharp
 				tree.Insert(body);
 			}
 
-			List<Body> result = tree.Query(bodies[5], 0.75f);
+			List<VirtualBody> result = tree.Query(bodies[5], 0.75f);
 
 			Console.ReadLine();
 		}
