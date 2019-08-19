@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
+using System.Numerics;
 using System.Runtime.Serialization.Json;
 
 namespace gravity_simulator_csharp
@@ -27,7 +29,7 @@ namespace gravity_simulator_csharp
 			const float durationBetweenFrames = 1f / framesPerSecond;
 			float durationSinceLastSnapshot = 0;
 			float percent = 0;
-			float percentTarget = 0.1f;
+			float percentTarget = 0.0f;
 
 			Stopwatch watch = Stopwatch.StartNew();
 
@@ -53,7 +55,7 @@ namespace gravity_simulator_csharp
 
 			watch.Stop();
 
-			Console.WriteLine("");
+			Console.WriteLine("100%");
 			Console.WriteLine("Elapsed time: {0}", watch.Elapsed);
 			OutputFrames(snapshots);
 		}
@@ -68,17 +70,29 @@ namespace gravity_simulator_csharp
 		static void TestQuadTree()
 		{
 			var origin = new Rectangle(new System.Numerics.Vector2(-2, -2), 4, 4);
-			var tree = new QuadTree(origin, 2);
+			var tree = new BarnesHutTree(origin, 2);
 
-			tree.Insert(new System.Numerics.Vector2(-1, 1));
-			tree.Insert(new System.Numerics.Vector2(1, 1));
-			tree.Insert(new System.Numerics.Vector2(0.5f, -0.5f));
-			tree.Insert(new System.Numerics.Vector2(1.5f, -0.5f));
-			tree.Insert(new System.Numerics.Vector2(1.5f, -1.5f));
-			tree.Insert(new System.Numerics.Vector2(-1, -1));
+			var data = new float[]
+			{
+				1, -1, 1,
+				1, 0.5f, 1.5f,
+				1, 1.5f, 0.5f,
+				1, 0.5f, -0.5f,
+				1, 1.5f, -0.5f,
+				1, 1.5f, -1.5f,
+				1, -1, -1
+			};
 
-			var range = new Rectangle(new System.Numerics.Vector2(-2, -2), 3, 3);
-			var points = tree.Query(range);
+			var bodies = new List<Body>();
+
+			for (int index = 0; index < data.Length; index += 3)
+			{
+				var body = new Body(data[index + 0], new Vector2(data[index + 1], data[index + 2]), Vector2.Zero, Vector2.Zero);
+				bodies.Add(body);
+				tree.Insert(body);
+			}
+
+			List<Body> result = tree.Query(bodies[5], 0.75f);
 
 			Console.ReadLine();
 		}

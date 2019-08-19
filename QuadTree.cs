@@ -1,33 +1,108 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 
 namespace gravity_simulator_csharp
 {
-	public class QuadTree
+	public class BarnesHutTree
 	{
-		private IBoundary Boundary;
+		private Rectangle Boundary;
 		private uint LeafCapacity;
-		private List<Vector2> Points;
-		private QuadTree[] Nodes;
+		private List<Body> Bodies;
+		private BarnesHutTree[] Nodes;
 
-		public QuadTree(IBoundary boundary, uint leafCapacity)
+		public BarnesHutTree(Rectangle boundary, uint leafCapacity)
 		{
 			this.Boundary = boundary;
 			this.LeafCapacity = leafCapacity;
-			Points = new List<Vector2>();
+			Bodies = new List<Body>();
 		}
 
-		public bool Insert(Vector2 point)
+		private float GetTotalMass(Body exclude)
 		{
-			if (Boundary.Contains(point) == false)
+			float _totalMass = 0;
+
+			if (Bodies != null)
+			{
+				foreach (Body body in Bodies)
+				{
+					if (body != exclude)
+					{
+						_totalMass += body.Mass;
+					}
+				}
+			}
+			else if (Nodes != null)
+			{
+				foreach (BarnesHutTree tree in Nodes)
+				{
+					_totalMass += tree.GetTotalMass(exclude);
+				}
+			}
+
+			return _totalMass;
+		}
+
+		private Nullable<Vector2> GetCenterOfMass(Body exclude)
+		{
+			if (Bodies != null && Bodies.Count == 0 && Nodes == null)
+			{
+				return null;
+			}
+
+			var bodies = new List<Body>();
+
+			if (Bodies != null)
+			{
+				foreach (Body body in Bodies)
+				{
+					if (body != exclude)
+					{
+						bodies.AddRange(Bodies);
+					}
+				}
+			}
+			else if (Nodes != null)
+			{
+				foreach (BarnesHutTree tree in Nodes)
+				{
+					if (tree.GetCenterOfMass(exclude).HasValue == true)
+					{
+						bodies.Add(new Body(tree.GetTotalMass(exclude), tree.GetCenterOfMass(exclude).Value, Vector2.Zero, Vector2.Zero));
+					}
+				}
+			}
+
+			if (bodies.Count == 0)
+			{
+				return null;
+			}
+
+			float totalMass = 0;
+			float allX = 0;
+			float allY = 0;
+
+			foreach (Body body in bodies)
+			{
+				totalMass += body.Mass;
+				allX += body.Position.X * body.Mass;
+				allY += body.Position.Y * body.Mass;
+			}
+
+			return new Vector2(allX / totalMass, allY / totalMass);
+		}
+
+		public bool Insert(Body body)
+		{
+			if (Boundary.Contains(body) == false)
 			{
 				return false;
 			}
 
-			if (Points != null && Points.Count < LeafCapacity)
+			if (Bodies != null && Bodies.Count < LeafCapacity)
 			{
-				Points.Add(point);
+				Bodies.Add(body);
 				return true;
 			}
 
@@ -36,9 +111,9 @@ namespace gravity_simulator_csharp
 				Subdivide();
 			}
 
-			foreach (QuadTree node in Nodes)
+			foreach (BarnesHutTree node in Nodes)
 			{
-				if (node.Insert(point))
+				if (node.Insert(body))
 				{
 					return true;
 				}
@@ -52,7 +127,7 @@ namespace gravity_simulator_csharp
 			double width = Boundary.Width / 2;
 			double height = Boundary.Height / 2;
 
-			IBoundary[] boundaries = new Rectangle[]
+			Rectangle[] boundaries = new Rectangle[]
 			{
 				new Rectangle(new Vector2(Boundary.Origin.X, Boundary.Origin.Y), width, height),
 				new Rectangle(new Vector2((float)(Boundary.Origin.X + width), Boundary.Origin.Y), width, height),
@@ -60,20 +135,20 @@ namespace gravity_simulator_csharp
 				new Rectangle(new Vector2((float)(Boundary.Origin.X + width), (float)(Boundary.Origin.Y + height)), width, height),
 			};
 
-			Nodes = new QuadTree[4];
+			Nodes = new BarnesHutTree[4];
 
 			for (int i = 0; i < Nodes.Length; i++)
 			{
-				Nodes[i] = new QuadTree(boundaries[i], LeafCapacity);
+				Nodes[i] = new BarnesHutTree(boundaries[i], LeafCapacity);
 			}
 
-			foreach (Vector2 point in Points)
+			foreach (Body body in Bodies)
 			{
 				bool pointInserted = false;
 
-				foreach (QuadTree tree in Nodes)
+				foreach (BarnesHutTree tree in Nodes)
 				{
-					if (tree.Insert(point))
+					if (tree.Insert(body))
 					{
 						pointInserted = true;
 						break;
@@ -83,25 +158,25 @@ namespace gravity_simulator_csharp
 				Debug.Assert(pointInserted == true, "Point were not inserted during subdivision.");
 			}
 
-			Points = null;
+			Bodies = null;
 		}
 
-		public List<Vector2> Query(IBoundary range)
+		public List<Body> Query(Rectangle range)
 		{
-			var pointsInRange = new List<Vector2>();
+			var bodiesInRange = new List<Body>();
 
 			if (Boundary.Intersects(range) == false)
 			{
-				return pointsInRange;
+				return bodiesInRange;
 			}
 
-			if (Points != null)
+			if (Bodies != null)
 			{
-				foreach (Vector2 point in Points)
+				foreach (Body body in Bodies)
 				{
-					if (range.Contains(point))
+					if (range.Contains(body))
 					{
-						pointsInRange.Add(point);
+						bodiesInRange.Add(body);
 					}
 				}
 			}
@@ -109,27 +184,64 @@ namespace gravity_simulator_csharp
 			{
 				Debug.Assert(Nodes != null, "Nodes should not be null when Points are already null.");
 
-				foreach (QuadTree tree in Nodes)
+				foreach (BarnesHutTree tree in Nodes)
 				{
-					pointsInRange.AddRange(tree.Query(range));
+					bodiesInRange.AddRange(tree.Query(range));
 				}
 			}
 
-			return pointsInRange;
+			return bodiesInRange;
+		}
+
+		public List<Body> Query(Body body, float theta)
+		{
+			var virtualBodies = new List<Body>();
+			Nullable<Vector2> centerOfMass;
+
+			centerOfMass = GetCenterOfMass(body);
+
+			if (Bodies != null && Bodies.Count > 0 && centerOfMass.HasValue)
+			{
+				virtualBodies.Add(new Body(
+					GetTotalMass(body),
+					centerOfMass.Value,
+					Vector2.Zero,
+					Vector2.Zero
+				));
+			}
+			else if (Nodes != null)
+			{
+				foreach (BarnesHutTree tree in Nodes)
+				{
+					centerOfMass = tree.GetCenterOfMass(body);
+
+					if (centerOfMass.HasValue == true)
+					{
+						float distance = Vector2.Distance(centerOfMass.Value, body.Position);
+						float localTheta = (float)(tree.Boundary.Width / distance);
+
+						if (localTheta >= theta)
+						{
+							virtualBodies.AddRange(tree.Query(body, theta));
+						}
+						else
+						{
+							virtualBodies.Add(
+								new Body(tree.GetTotalMass(body),
+								centerOfMass.Value,
+								Vector2.Zero,
+								Vector2.Zero
+							));
+						}
+					}
+				}
+			}
+
+			return virtualBodies;
 		}
 	}
 
-	public interface IBoundary
-	{
-		Vector2 Origin { get; }
-		double Width { get; }
-		double Height { get; }
-
-		bool Contains(Vector2 point);
-		bool Intersects(IBoundary boundary);
-	}
-
-	public class Rectangle : IBoundary
+	public class Rectangle
 	{
 		public Rectangle(Vector2 Origin, double Width, double Height)
 		{
@@ -142,13 +254,13 @@ namespace gravity_simulator_csharp
 		public double Width { get; private set; }
 		public double Height { get; private set; }
 
-		public bool Contains(Vector2 point)
+		public bool Contains(Body body)
 		{
-			return point.X >= Origin.X && point.X <= Origin.X + Width
-				&& point.Y >= Origin.Y && point.Y <= Origin.Y + Height;
+			return body.Position.X >= Origin.X && body.Position.X <= Origin.X + Width
+				&& body.Position.Y >= Origin.Y && body.Position.Y <= Origin.Y + Height;
 		}
 
-		public bool Intersects(IBoundary boundary)
+		public bool Intersects(Rectangle boundary)
 		{
 			return !(boundary.Origin.X > Origin.X + Width
 				|| boundary.Origin.Y > Origin.Y + Height

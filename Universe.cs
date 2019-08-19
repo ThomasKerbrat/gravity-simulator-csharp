@@ -8,6 +8,7 @@ namespace gravity_simulator_csharp
 	{
 		private const float _gravitationalConstant = 6.67408e-11f;
 		private const uint OutwardBoundLimit = 2000;
+		private const float Theta = 0.75f;
 		private uint ComputedTicks = 0;
 
 		internal readonly uint ComputationsPerSecond;
@@ -24,6 +25,37 @@ namespace gravity_simulator_csharp
 			}
 		}
 
+		private BarnesHutTree ComputeBarnesHutTree()
+		{
+			float minX = float.MaxValue;
+			float maxX = float.MinValue;
+			float minY = float.MaxValue;
+			float maxY = float.MinValue;
+
+			foreach (Body body in Bodies)
+			{
+				if (body.Position.X < minX) { minX = body.Position.X; }
+				if (body.Position.X > maxX) { maxX = body.Position.X; }
+				if (body.Position.Y < minY) { minY = body.Position.Y; }
+				if (body.Position.Y > maxY) { maxY = body.Position.Y; }
+			}
+
+			float width = Math.Abs(maxX - minX);
+			float height = Math.Abs(maxY - minY);
+			float size = (float)Math.Ceiling(Math.Max(width, height) + 0.5);
+			var middle = new Vector2((minX + maxX) / 2, (minY + maxY) / 2);
+			var origin = new Vector2(middle.X - size / 2, middle.Y - size/2);
+
+			var tree = new BarnesHutTree(new Rectangle(origin, size, size), 4);
+
+			foreach (Body body in Bodies)
+			{
+				tree.Insert(body);
+			}
+
+			return tree;
+		}
+
 		internal float Duration
 		{
 			get { return ComputedTicks / (float)ComputationsPerSecond; }
@@ -37,9 +69,11 @@ namespace gravity_simulator_csharp
 		internal void Tick()
 		{
 			DeleteOutOfBoundBodies();
-			List<Vector2> forces = ComputeForcesBruteHalf();
+			// List<Vector2> forces = ComputeForcesBruteHalf();
+			BarnesHutTree tree = ComputeBarnesHutTree();
+			List<Vector2> forces = ComputeForcesBarnesHut(tree);
 			ShiftBodies(forces);
-			CollideBodiesBruteHelf();
+			// CollideBodiesBruteHalf();
 			ComputedTicks++;
 		}
 
@@ -89,24 +123,55 @@ namespace gravity_simulator_csharp
 			return forces;
 		}
 
+		private List<Vector2> ComputeForcesBarnesHut(BarnesHutTree tree)
+		{
+			var forces = new List<Vector2>();
+
+			foreach (Body a in Bodies)
+			{
+				var forcesOnBody = Vector2.Zero;
+				List<Body> virtualBodies = tree.Query(a, Theta);
+
+				foreach (Body b in virtualBodies)
+				{
+					float distance = Vector2.Distance(a.Position, b.Position);
+					float force = GravitationalConstant * ((a.Mass * b.Mass) / (float)Math.Pow(distance, 2));
+
+					float angle = (float)Math.Atan2(b.Position.Y - a.Position.Y, b.Position.X - a.Position.X);
+					forcesOnBody.X += (float)Math.Cos(angle) * force;
+					forcesOnBody.Y += (float)Math.Sin(angle) * force;
+				}
+
+				forces.Add(forcesOnBody);
+			}
+
+			return forces;
+		}
+
 		private void ShiftBodies(List<Vector2> forces)
 		{
 			for (int index = 0; index < Bodies.Count; index++)
 			{
 				Body body = Bodies[index];
 
-				body.Acceleration.X = forces[index].X / body.Mass;
-				body.Acceleration.Y = forces[index].Y / body.Mass;
+				body.Acceleration = new Vector2(
+					forces[index].X / body.Mass,
+					forces[index].Y / body.Mass
+				);
 
-				body.Velocity.X += body.Acceleration.X / ComputationsPerSecond;
-				body.Velocity.Y += body.Acceleration.Y / ComputationsPerSecond;
+				body.Velocity = new Vector2(
+					body.Velocity.X + (body.Acceleration.X / ComputationsPerSecond),
+					body.Velocity.Y + (body.Acceleration.Y / ComputationsPerSecond)
+				);
 
-				body.Position.X += body.Velocity.X / ComputationsPerSecond;
-				body.Position.Y += body.Velocity.Y / ComputationsPerSecond;
+				body.Position = new Vector2(
+					body.Position.X + (body.Velocity.X / ComputationsPerSecond),
+					body.Position.Y + (body.Velocity.Y / ComputationsPerSecond)
+				);
 			}
 		}
 
-		private void CollideBodiesBruteHelf()
+		private void CollideBodiesBruteHalf()
 		{
 			for (int i = 0; i < Bodies.Count; i++)
 			{
