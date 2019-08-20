@@ -20,7 +20,7 @@ namespace gravity_simulator_csharp
 			const uint simulationDurationInSeconds = 60;
 			const uint framesPerSecond = 30;
 
-			ISeedStrategy seedStrategy = new PlanetRingStrategy();
+			ISeedStrategy seedStrategy = new GlobularClusterStrategy();
 			var universe = new Universe(computationsPerSecond: 100, bodyNumber, seedStrategy);
 			var snapshots = new SerializedUniverse(bodyNumber, simulationDurationInSeconds, framesPerSecond);
 
@@ -69,9 +69,7 @@ namespace gravity_simulator_csharp
 
 		static void TestQuadTree()
 		{
-			var origin = new Rectangle(new System.Numerics.Vector2(-2, -2), 4, 4);
-			var tree = new BarnesHutTree(origin, 2);
-
+			var bodies = new List<Body>();
 			var data = new float[]
 			{
 				1, -1, 1,
@@ -83,16 +81,14 @@ namespace gravity_simulator_csharp
 				1, -1, -1
 			};
 
-			var bodies = new List<Body>();
-
 			for (int index = 0; index < data.Length; index += 3)
 			{
 				var body = new Body(data[index + 0], new Vector2(data[index + 1], data[index + 2]), Vector2.Zero, Vector2.Zero);
 				bodies.Add(body);
-				tree.Insert(body);
 			}
 
-			List<VirtualBody> result = tree.Query(bodies[5], 0.75f);
+			var universe = new Universe(computationsPerSecond: 100, bodies);
+			universe.Tick();
 
 			Console.ReadLine();
 		}

@@ -41,5 +41,10 @@ namespace gravity_simulator_csharp
 		}
 
         public float Radius { get; private set; }
+
+		public override string ToString()
+		{
+			return Position.ToString();
+		}
     }
 }

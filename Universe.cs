@@ -25,6 +25,12 @@ namespace gravity_simulator_csharp
 			}
 		}
 
+		internal Universe(uint computationsPerSecond, List<Body> bodies)
+		{
+			this.ComputationsPerSecond = computationsPerSecond;
+			this.Bodies = bodies;
+		}
+
 		private BarnesHutTree ComputeBarnesHutTree()
 		{
 			float minX = float.MaxValue;
