@@ -299,6 +299,7 @@ namespace gravity_simulator_csharp
 				accY += b.Acceleration.Y * b.Mass;
 			}
 
+			a.Mass = totalMass;
 			a.Position = new Vector2(posX / totalMass, posY / totalMass);
 			a.Velocity = new Vector2(velX / totalMass, velY / totalMass);
 			a.Acceleration = new Vector2(accX / totalMass, accY / totalMass);
