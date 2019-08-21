@@ -241,19 +241,20 @@ namespace gravity_simulator_csharp
 		{
 			var virtualBodies = new List<VirtualBody>();
 
-			Vector2? centerOfMass;
-			centerOfMass = GetCenterOfMass(body);
-
-			if (Bodies != null && Bodies.Count > 0 && centerOfMass.HasValue)
+			if (Bodies != null && Bodies.Count > 0)
 			{
-				virtualBodies.Add(new VirtualBody()
+				foreach (Body b in Bodies)
 				{
-					Mass = GetTotalMass(body),
-					Position = centerOfMass.Value,
-				});
+					if (b != body)
+					{
+						virtualBodies.Add(VirtualBody.FromBody(b));
+					}
+				}
 			}
 			else if (Nodes != null)
 			{
+				Vector2? centerOfMass;
+
 				foreach (BarnesHutTree tree in Nodes)
 				{
 					centerOfMass = tree.GetCenterOfMass(body);
