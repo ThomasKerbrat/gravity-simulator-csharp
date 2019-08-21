@@ -16,11 +16,11 @@ namespace gravity_simulator_csharp
 
 		static void Start()
 		{
-			const uint bodyNumber = 100;
-			const uint simulationDurationInSeconds = 60;
+			const uint bodyNumber = 2500;
+			const uint simulationDurationInSeconds = 5;
 			const uint framesPerSecond = 30;
 
-			ISeedStrategy seedStrategy = new RandomSeedStrategy();
+			ISeedStrategy seedStrategy = new GlobularClusterStrategy();
 			var universe = new Universe(computationsPerSecond: 100, bodyNumber, seedStrategy);
 			var snapshots = new SerializedUniverse(bodyNumber, simulationDurationInSeconds, framesPerSecond);
 
@@ -56,8 +56,7 @@ namespace gravity_simulator_csharp
 
 			watch.Stop();
 
-			Console.WriteLine("100%");
-			Console.WriteLine("Elapsed time: {0}", watch.Elapsed);
+			Console.WriteLine("{0} s ({1}%)\t{2} b\t{3} s", universe.Duration, Math.Floor(percent * 100), universe.Bodies.Count, watch.Elapsed);
 			OutputFrames(snapshots);
 		}
 
