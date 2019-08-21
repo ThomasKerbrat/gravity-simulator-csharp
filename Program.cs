@@ -20,7 +20,7 @@ namespace gravity_simulator_csharp
 			const uint simulationDurationInSeconds = 60;
 			const uint framesPerSecond = 30;
 
-			ISeedStrategy seedStrategy = new GlobularClusterStrategy();
+			ISeedStrategy seedStrategy = new RandomSeedStrategy();
 			var universe = new Universe(computationsPerSecond: 100, bodyNumber, seedStrategy);
 			var snapshots = new SerializedUniverse(bodyNumber, simulationDurationInSeconds, framesPerSecond);
 
@@ -29,7 +29,8 @@ namespace gravity_simulator_csharp
 			const float durationBetweenFrames = 1f / framesPerSecond;
 			float durationSinceLastSnapshot = 0;
 			float percent = 0;
-			float percentTarget = 0.0f;
+			var displayInterval = TimeSpan.FromSeconds(5);
+			var nextDisplay = DateTime.Now;
 
 			Stopwatch watch = Stopwatch.StartNew();
 
@@ -45,10 +46,10 @@ namespace gravity_simulator_csharp
 
 					percent = universe.Duration / simulationDurationInSeconds;
 
-					if (percent >= percentTarget)
+					if (DateTime.Now >= nextDisplay)
 					{
-						percentTarget += 0.1f;
-						Console.Write("{0}%...", Math.Truncate(percent * 100));
+						nextDisplay += displayInterval;
+						Console.WriteLine("{0} s ({1}%)\t{2} b\t{3} s", universe.Duration, Math.Floor(percent * 100), universe.Bodies.Count, watch.Elapsed);
 					}
 				}
 			}

@@ -75,11 +75,11 @@ namespace gravity_simulator_csharp
 		internal void Tick()
 		{
 			DeleteOutOfBoundBodies();
-			// List<Vector2> forces = ComputeForcesBruteHalf();
-			BarnesHutTree tree = ComputeBarnesHutTree();
-			List<Vector2> forces = ComputeForcesBarnesHut(tree);
+			List<Vector2> forces = ComputeForcesBruteHalf();
+			// BarnesHutTree tree = ComputeBarnesHutTree();
+			// List<Vector2> forces = ComputeForcesBarnesHut(tree);
 			ShiftBodies(forces);
-			// CollideBodiesBruteHalf();
+			CollideBodiesBruteHalf();
 			ComputedTicks++;
 		}
 

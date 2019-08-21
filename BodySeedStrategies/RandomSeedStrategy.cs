@@ -9,7 +9,7 @@ namespace gravity_simulator_csharp
 
 		public Body NextBody(Universe universe)
 		{
-			const uint amplitude = 500;
+			const uint amplitude = 1500;
 
 			return new Body(
 				mass: 1e11f,
