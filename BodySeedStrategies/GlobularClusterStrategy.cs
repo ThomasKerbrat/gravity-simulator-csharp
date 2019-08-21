@@ -11,8 +11,8 @@ namespace gravity_simulator_csharp
         {
 			const uint dMin = 10;
 			const uint dMax = 600;
-			const float mMin = 1e12f;
-			const float mMax = 2e12f;
+			const float mMin = 1e11f;
+			const float mMax = 2e11f;
 
 			double tetha = random.NextDouble() * 2 * Math.PI;
 			double distance = random.NextDouble() * (dMax - dMin) + dMin;
