@@ -8,7 +8,7 @@ namespace gravity_simulator_csharp
 	{
 		private const float _gravitationalConstant = 6.67408e-11f;
 		private const uint OutwardBoundLimit = 2000;
-		private const float Theta = 0.75f;
+		private const float Theta = 0.25f;
 		private uint ComputedTicks = 0;
 
 		internal readonly uint ComputationsPerSecond;
@@ -31,6 +31,45 @@ namespace gravity_simulator_csharp
 			this.Bodies = bodies;
 		}
 
+		internal float Duration
+		{
+			get { return ComputedTicks / (float)ComputationsPerSecond; }
+		}
+
+		internal float GravitationalConstant
+		{
+			get { return _gravitationalConstant; }
+		}
+
+		internal void Tick()
+		{
+			DeleteOutOfBoundBodies();
+
+			// List<Vector2> forces1 = ComputeForcesBruteHalf();
+			// ShiftBodies(forces1);
+			// CollideBodiesBruteHalf();
+
+			BarnesHutTree tree;
+			tree = ComputeBarnesHutTree();
+			List<Vector2> forces2 = ComputeForcesBarnesHut(tree);
+			float maxRadius = ShiftBodies(forces2);
+			tree = ComputeBarnesHutTree();
+			CollideBodiesHarnesHutTree(tree, maxRadius);
+
+			ComputedTicks++;
+		}
+
+		private void DeleteOutOfBoundBodies()
+		{
+			for (int index = Bodies.Count - 1; index >= 0; index--)
+			{
+				if (Vector2.Distance(Vector2.Zero, Bodies[index].Position) > OutwardBoundLimit)
+				{
+					Bodies.RemoveAt(index);
+				}
+			}
+		}
+
 		private BarnesHutTree ComputeBarnesHutTree()
 		{
 			float minX = float.MaxValue;
@@ -50,7 +89,7 @@ namespace gravity_simulator_csharp
 			float height = Math.Abs(maxY - minY);
 			float size = (float)Math.Ceiling(Math.Max(width, height) + 0.5);
 			var middle = new Vector2((minX + maxX) / 2, (minY + maxY) / 2);
-			var origin = new Vector2(middle.X - size / 2, middle.Y - size/2);
+			var origin = new Vector2(middle.X - size / 2, middle.Y - size / 2);
 
 			var tree = new BarnesHutTree(new Rectangle(origin, size, size), 4);
 
@@ -60,38 +99,6 @@ namespace gravity_simulator_csharp
 			}
 
 			return tree;
-		}
-
-		internal float Duration
-		{
-			get { return ComputedTicks / (float)ComputationsPerSecond; }
-		}
-
-		internal float GravitationalConstant
-		{
-			get { return _gravitationalConstant; }
-		}
-
-		internal void Tick()
-		{
-			DeleteOutOfBoundBodies();
-			List<Vector2> forces = ComputeForcesBruteHalf();
-			// BarnesHutTree tree = ComputeBarnesHutTree();
-			// List<Vector2> forces = ComputeForcesBarnesHut(tree);
-			ShiftBodies(forces);
-			CollideBodiesBruteHalf();
-			ComputedTicks++;
-		}
-
-		private void DeleteOutOfBoundBodies()
-		{
-			for (int index = Bodies.Count - 1; index >= 0; index--)
-			{
-				if (Vector2.Distance(Vector2.Zero, Bodies[index].Position) > OutwardBoundLimit)
-				{
-					Bodies.RemoveAt(index);
-				}
-			}
 		}
 
 		private List<Vector2> ComputeForcesBruteHalf()
@@ -154,8 +161,10 @@ namespace gravity_simulator_csharp
 			return forces;
 		}
 
-		private void ShiftBodies(List<Vector2> forces)
+		private float ShiftBodies(List<Vector2> forces)
 		{
+			float maxRadius = float.MinValue;
+
 			for (int index = 0; index < Bodies.Count; index++)
 			{
 				Body body = Bodies[index];
@@ -174,7 +183,11 @@ namespace gravity_simulator_csharp
 					body.Position.X + (body.Velocity.X / ComputationsPerSecond),
 					body.Position.Y + (body.Velocity.Y / ComputationsPerSecond)
 				);
+
+				if (body.Radius > maxRadius) { maxRadius = body.Radius; }
 			}
+
+			return maxRadius;
 		}
 
 		private void CollideBodiesBruteHalf()
@@ -186,7 +199,7 @@ namespace gravity_simulator_csharp
 					Body a = Bodies[i];
 					Body b = Bodies[j];
 
-					if (a == null || b == null) continue;
+					if (a == null || b == null) { continue; }
 
 					float distance = Vector2.Distance(a.Position, b.Position);
 
@@ -220,6 +233,75 @@ namespace gravity_simulator_csharp
 					Bodies.RemoveAt(index);
 				}
 			}
+		}
+
+		private void CollideBodiesHarnesHutTree(BarnesHutTree tree, float maxRadius)
+		{
+			var collisions = new Dictionary<Body, HashSet<Body>>();
+
+			foreach (Body a in Bodies)
+			{
+				Vector2 origin = new Vector2(a.Position.X - 2 * maxRadius, a.Position.Y - 2 * maxRadius);
+				Rectangle range = new Rectangle(origin, 4 * maxRadius, 4 * maxRadius);
+				List<Body> closeBodies = tree.Query(range);
+
+				foreach (Body b in closeBodies)
+				{
+					if (a == b) { continue; }
+
+					float distance = Vector2.Distance(a.Position, b.Position);
+
+					if (distance < (a.Radius + b.Radius))
+					{
+						// If there is A, there must not be B inside of it.
+						if (collisions.ContainsKey(a) && collisions.GetValueOrDefault(a).Contains(b) == false)
+						{
+							collisions.GetValueOrDefault(a).Add(b);
+						}
+						// Either there is no B, or if there is, there must not be A inside of B.
+						else if (collisions.ContainsKey(b) == false || (collisions.ContainsKey(b) && collisions.GetValueOrDefault(b).Contains(a) == false))
+						{
+							collisions.Add(a, new HashSet<Body>() { b });
+						}
+					}
+				}
+			}
+
+			foreach (var collision in collisions)
+			{
+				ComputeCollision(collision.Key, collision.Value);
+
+				foreach (Body body in collision.Value)
+				{
+					Bodies.Remove(body);
+				}
+			}
+		}
+
+		private void ComputeCollision(Body a, IEnumerable<Body> bodies)
+		{
+			float totalMass = a.Mass;
+			float posX = a.Position.X * a.Mass;
+			float posY = a.Position.Y * a.Mass;
+			float velX = a.Velocity.X * a.Mass;
+			float velY = a.Velocity.Y * a.Mass;
+			float accX = a.Acceleration.X * a.Mass;
+			float accY = a.Acceleration.Y * a.Mass;
+
+			foreach (Body b in bodies)
+			{
+				totalMass += b.Mass;
+				posX += b.Position.X * b.Mass;
+				posY += b.Position.Y * b.Mass;
+				velX += b.Velocity.X * b.Mass;
+				velY += b.Velocity.Y * b.Mass;
+				accX += b.Acceleration.X * b.Mass;
+				accY += b.Acceleration.Y * b.Mass;
+			}
+
+			a.Position = new Vector2(posX / totalMass, posY / totalMass);
+			a.Velocity = new Vector2(velX / totalMass, velY / totalMass);
+			a.Acceleration = new Vector2(accX / totalMass, accY / totalMass);
 		}
 	}
 }
