@@ -29,10 +29,11 @@ namespace gravity_simulator_csharp
 			const float durationBetweenFrames = 1f / framesPerSecond;
 			float durationSinceLastSnapshot = 0;
 			float percent = 0;
-			var displayInterval = TimeSpan.FromSeconds(5);
-			var nextDisplay = DateTime.Now;
+			var displayInterval = TimeSpan.FromSeconds(30);
+			var nextDisplay = DateTime.Now + displayInterval;
 
 			Stopwatch watch = Stopwatch.StartNew();
+			Console.WriteLine("{0} s ({1}%)\t{2} b\t{3} s", Math.Round(universe.Duration, 2), Math.Floor(percent * 100), universe.Bodies.Count, watch.Elapsed);
 
 			while (universe.Duration < simulationDurationInSeconds)
 			{
@@ -49,14 +50,14 @@ namespace gravity_simulator_csharp
 					if (DateTime.Now >= nextDisplay)
 					{
 						nextDisplay += displayInterval;
-						Console.WriteLine("{0} s ({1}%)\t{2} b\t{3} s", universe.Duration, Math.Floor(percent * 100), universe.Bodies.Count, watch.Elapsed);
+						Console.WriteLine("{0} s ({1}%)\t{2} b\t{3} s", Math.Round(universe.Duration, 2), Math.Floor(percent * 100), universe.Bodies.Count, watch.Elapsed);
 					}
 				}
 			}
 
 			watch.Stop();
 
-			Console.WriteLine("{0} s ({1}%)\t{2} b\t{3} s", universe.Duration, Math.Floor(percent * 100), universe.Bodies.Count, watch.Elapsed);
+			Console.WriteLine("{0} s ({1}%)\t{2} b\t{3} s", Math.Round(universe.Duration, 2), Math.Floor(percent * 100), universe.Bodies.Count, watch.Elapsed);
 			OutputFrames(snapshots);
 		}
 
