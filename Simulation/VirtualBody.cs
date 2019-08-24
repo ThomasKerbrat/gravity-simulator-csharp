@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
+﻿using System.Numerics;
 
 namespace gravity_simulator_csharp
 {
@@ -13,6 +10,11 @@ namespace gravity_simulator_csharp
 		public static VirtualBody FromBody(Body body)
 		{
 			return new VirtualBody() { Mass = body.Mass, Position = body.Position };
+		}
+
+		public override string ToString()
+		{
+			return $"<v>{Mass} {Position.ToString()}";
 		}
 	}
 }

@@ -7,18 +7,18 @@ namespace gravity_simulator_csharp
     internal class SerializedUniverse
     {
 		[DataMember]
-		uint framesPerSecond;
+		float framesPerSecond;
 
         [DataMember]
         List<List<float[]>> framesBodiesCoordinates;
 
-        internal SerializedUniverse(uint bodyNumber, uint seconds, uint framesPerSecond)
+        internal SerializedUniverse(int bodyNumber, float seconds, float framesPerSecond)
         {
 			this.framesPerSecond = framesPerSecond;
             framesBodiesCoordinates = new List<List<float[]>>();
         }
 
-        internal void SnapshotUniverse(Universe universe)
+        internal void SnapshotUniverse(IUniverse universe)
         {
             List<float[]> bodies = new List<float[]>();
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
@@ -56,7 +57,7 @@ namespace gravity_simulator_csharp
 				_didComputeTotalMass = true;
 			}
 
-			return _totalMass;
+			return totalMass;
 		}
 
 		private Vector2? GetCenterOfMass(Body exclude)
@@ -104,6 +105,8 @@ namespace gravity_simulator_csharp
 							Position = nodesCenterOfMass.Value,
 						};
 						bodies.Add(newBody);
+
+						if (treesTotalMass == 0) { Debugger.Break(); }
 					}
 				}
 			}
@@ -126,6 +129,8 @@ namespace gravity_simulator_csharp
 			}
 
 			var centerOfMass = new Vector2(allX / totalMass, allY / totalMass);
+
+			if (float.IsNaN(centerOfMass.X) || float.IsNaN(centerOfMass.Y)) { Debugger.Break(); }
 
 			// Caching for later use (only if there is no body to exclude).
 			if (Boundary.Contains(exclude.Position) == false)

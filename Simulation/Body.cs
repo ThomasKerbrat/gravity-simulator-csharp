@@ -37,14 +37,14 @@ namespace gravity_simulator_csharp
 
 		private void ComputeRadius()
 		{
-			Radius = (float)Math.Pow(3f / 4f * Mass / Math.PI, 1f / 3f) / 5e3f;
+			Radius = Mass >= 1e16 ? 1 : (float)Math.Pow(3f / 4f * Mass / Math.PI, 1f / 3f) / 5e3f;
 		}
 
         public float Radius { get; private set; }
 
 		public override string ToString()
 		{
-			return Position.ToString();
+			return $"<b>{Mass} {Position.ToString()}";
 		}
     }
 }

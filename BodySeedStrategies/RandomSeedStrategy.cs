@@ -7,7 +7,7 @@ namespace gravity_simulator_csharp
 	{
 		Random random = new Random(1);
 
-		public Body NextBody(Universe universe)
+		public Body NextBody(IUniverse universe)
 		{
 			const uint amplitude = 1500;
 			const float velocity = 2;

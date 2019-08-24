@@ -8,7 +8,7 @@ namespace gravity_simulator_csharp
         bool didGenerateCentralBody = false;
 		Random random = new Random(1);
 
-        public Body NextBody(Universe universe)
+        public Body NextBody(IUniverse universe)
         {
             const float centralBodyMass = 1e16f;
 

@@ -1,8 +1,8 @@
 
 namespace gravity_simulator_csharp
 {
-	internal interface ISeedStrategy
+	public interface ISeedStrategy
 	{
-		Body NextBody(Universe universe);
+		Body NextBody(IUniverse universe);
 	}
 }
