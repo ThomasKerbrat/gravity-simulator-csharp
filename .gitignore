@@ -5,6 +5,7 @@
 
 # Program custom ignores
 output.json
+output.bin
 
 # User-specific files
 *.suo

@@ -1,0 +1,22 @@
+-- this is a comment
+
+-- "custome type":
+--    "type"quantifier --description
+--    "type"quantifier --description
+--    ...
+
+-- quantifier are borrowed from regex
+
+data:
+    uint32 --version
+    float32 --framesPerSecond
+    frame+
+
+frame:
+    uint32 --bodyCount
+    body{bodyCount}
+
+body:
+    float32 --mass
+    float32 --x
+    float32 --y

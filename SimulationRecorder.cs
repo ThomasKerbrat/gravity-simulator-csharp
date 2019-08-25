@@ -62,9 +62,11 @@ namespace gravity_simulator_csharp
 
 		private void OutputFrames(SerializedUniverse universe)
 		{
-			Stream stream = new FileStream("output.json", FileMode.Create, FileAccess.Write, FileShare.None);
-			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(SerializedUniverse));
-			serializer.WriteObject(stream, universe);
+			using (Stream stream = new FileStream("output.bin", FileMode.Create, FileAccess.Write, FileShare.None))
+			{
+				byte[] data = universe.Serialize();
+				stream.Write(data, 0, data.Length);
+			}
 		}
 	}
 }

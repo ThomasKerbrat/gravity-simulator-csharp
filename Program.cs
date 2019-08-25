@@ -5,8 +5,8 @@ namespace gravity_simulator_csharp
 	{
 		static void Main(string[] args)
 		{
-			const uint bodyCount = 1000;
-			const float duration = 60;
+			const uint bodyCount = 1024;
+			const float duration = 10;
 			const float framesPerSecond = 30;
 			const float computationsPerSecond = 100;
 
